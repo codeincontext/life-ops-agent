@@ -12,12 +12,24 @@ CONFIG_DIR="$HOME/.claude"
 CREDS="$CONFIG_DIR/.credentials.json"
 
 # $HOME/.claude.json holds onboarding/theme/folder-trust state but lives OUTSIDE
-# the $CONFIG_DIR volume, so a container *recreate* (image update) wipes it —
-# throwing a detached Remote Control session back into the onboarding + folder-
-# trust prompts, which block on input and never reach "active". Persist it inside
-# the volume via a symlink, recreated on every boot. Writes (incl. the one-time
-# interactive /login) flow through the link into the volume, so they survive.
-ln -sfn "$CONFIG_DIR/claude.json.persisted" "$HOME/.claude.json"
+# the $CONFIG_DIR volume, so a container *recreate* wipes it (and a recreated
+# container gets a fresh machine-id, which also resets onboarding) — throwing a
+# detached Remote Control session back into the onboarding + folder-trust
+# prompts, which block on input and never reach "active". These flags are
+# static, so just (re)assert them on every boot, before Claude starts.
+node -e '
+  const fs = require("fs"), p = process.env.HOME + "/.claude.json";
+  let d = {}; try { d = JSON.parse(fs.readFileSync(p, "utf8")); } catch (e) {}
+  d.hasCompletedOnboarding = true;
+  d.lastOnboardingVersion = d.lastOnboardingVersion || "0.2.56";
+  d.theme = d.theme || "dark";
+  d.projects = d.projects || {};
+  d.projects["/project"] = Object.assign(
+    { hasTrustDialogAccepted: true, hasCompletedProjectOnboarding: true },
+    d.projects["/project"]
+  );
+  fs.writeFileSync(p, JSON.stringify(d, null, 2));
+' || echo "[entrypoint] warning: could not pre-seed .claude.json flags"
 
 if [[ ! -f "$CREDS" ]]; then
   cat <<EOF
