@@ -39,7 +39,7 @@ echo "[entrypoint] authenticated — starting remote-control session"
 # Container-level `restart: unless-stopped` covers process death; this loop
 # covers a clean exit of the session without taking the container down.
 while true; do
-  claude --remote-control --add-dir /vault
+  claude --remote-control --add-dir /vault --name "${SESSION_NAME:-life-ops-agent}"
   rc=$?
   echo "[entrypoint] remote-control exited (rc=$rc); restarting in 5s"
   sleep 5

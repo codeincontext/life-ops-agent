@@ -11,6 +11,8 @@ services:
     tty: true
     environment:
       TZ: Europe/Paris
+      # Display name of the Remote Control session in the Claude app / web.
+      SESSION_NAME: ${SESSION_NAME:-life-ops-agent}
     volumes:
       # Login + connector auth live here; named volume = survives rebuilds.
       - claude-config:/home/node/.claude
