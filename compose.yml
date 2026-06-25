@@ -1,0 +1,35 @@
+services:
+  claude-remote:
+    build: .
+    image: claude-remote:latest
+    container_name: claude-remote
+    restart: unless-stopped
+    # A Remote Control session is an interactive TUI; give it a pty + stdin so
+    # it behaves, and so you can `docker exec -it` in to log in the first time.
+    stdin_open: true
+    tty: true
+    environment:
+      TZ: Europe/Paris
+    volumes:
+      # Login + connector auth live here; named volume = survives rebuilds.
+      - claude-config:/home/node/.claude
+      # The claude-admin project (CLAUDE.md, .claude/skills, memory) — so the
+      # session has your instructions and the daily-triage skill.
+      - ${PROJECT_PATH:?set PROJECT_PATH in .env}:/project
+      # Shared Obsidian vault volume (see below) — one sync client populates it,
+      # every container mounts the same volume instead of syncing its own copy.
+      - obsidian-vault:/vault
+    # No ports published: Remote Control only needs OUTBOUND https to
+    # api.anthropic.com. Nothing inbound to expose — your phone reaches the
+    # session via Anthropic, not by connecting to the box.
+
+volumes:
+  claude-config:
+  # The vault as a SHARED, externally-created volume. One obsidian-headless
+  # sync service (run once, elsewhere — mirrors your mias-guide setup) owns the
+  # Obsidian Sync login and keeps this volume current; claude-remote and any
+  # other container just mount `obsidian-vault` read/write. `external: true`
+  # means compose won't create/destroy it — create it once with:
+  #   docker volume create obsidian-vault
+  obsidian-vault:
+    external: true
