@@ -34,3 +34,5 @@ volumes:
   # containers (e.g. an obsidian-headless sync service), make it `external: true`
   # and ensure all of them use the same uid.
   obsidian-vault:
+  # Obsidian Sync login + sync config for the in-container `ob` client.
+  ob-config:
