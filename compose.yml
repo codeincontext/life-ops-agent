@@ -1,7 +1,8 @@
 services:
   claude-remote:
-    build: .
-    image: claude-remote:latest
+    # Pre-built by CI and published to GHCR (see .github/workflows/build.yml).
+    # Update flow: push to main → Actions rebuilds → `docker compose pull` on the box.
+    image: ghcr.io/codeincontext/life-ops-agent:latest
     container_name: claude-remote
     restart: unless-stopped
     # A Remote Control session is an interactive TUI; give it a pty + stdin so
