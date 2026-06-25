@@ -13,11 +13,10 @@ ENV TZ=Europe/Paris
 COPY entrypoint.sh /usr/local/bin/entrypoint
 RUN chmod +x /usr/local/bin/entrypoint
 
-# The node image ships a uid-1000 `node` user. Run as that (Claude Code warns
-# when run as root) and keep its config — including the login credentials — in
-# /home/node/.claude, which compose mounts as a named volume so auth survives
-# rebuilds and restarts.
-USER node
+# Runs as root: this is a single-purpose container on a personal host with no
+# inbound ports, and root avoids uid friction with bind-mounted project/vault
+# dirs and the config volume. Login credentials live in /root/.claude (the
+# `claude-config` volume) so auth survives restarts.
 WORKDIR /project
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/entrypoint"]
