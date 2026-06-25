@@ -13,12 +13,11 @@ services:
       TZ: Europe/Paris
     volumes:
       # Login + connector auth live here; named volume = survives rebuilds.
-      - claude-config:/root/.claude
+      - claude-config:/home/node/.claude
       # The claude-admin project (CLAUDE.md, .claude/skills, memory) — so the
       # session has your instructions and the daily-triage skill.
       - ${PROJECT_PATH:?set PROJECT_PATH in .env}:/project
-      # Shared Obsidian vault volume (see below) — one sync client populates it,
-      # every container mounts the same volume instead of syncing its own copy.
+      # Vault volume owned by this stack (not shared) — simplest ownership.
       - obsidian-vault:/vault
     # No ports published: Remote Control only needs OUTBOUND https to
     # api.anthropic.com. Nothing inbound to expose — your phone reaches the
@@ -26,11 +25,8 @@ services:
 
 volumes:
   claude-config:
-  # The vault as a SHARED, externally-created volume. One obsidian-headless
-  # sync service (run once, elsewhere — mirrors your mias-guide setup) owns the
-  # Obsidian Sync login and keeps this volume current; claude-remote and any
-  # other container just mount `obsidian-vault` read/write. `external: true`
-  # means compose won't create/destroy it — create it once with:
-  #   docker volume create obsidian-vault
+  # Vault owned by this stack. The image pre-creates /vault owned by `node`, so
+  # this volume initialises node-writable. If you later want it shared across
+  # containers (e.g. an obsidian-headless sync service), make it `external: true`
+  # and ensure all of them use the same uid.
   obsidian-vault:
-    external: true

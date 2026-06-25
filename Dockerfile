@@ -13,10 +13,12 @@ ENV TZ=Europe/Paris
 COPY entrypoint.sh /usr/local/bin/entrypoint
 RUN chmod +x /usr/local/bin/entrypoint
 
-# Runs as root: this is a single-purpose container on a personal host with no
-# inbound ports, and root avoids uid friction with bind-mounted project/vault
-# dirs and the config volume. Login credentials live in /root/.claude (the
-# `claude-config` volume) so auth survives restarts.
+# Run as the image's uid-1000 `node` user (not root). Pre-create the dirs that
+# get named volumes mounted onto them and chown to node, so those volumes
+# initialise node-owned — letting the session persist its login (/home/node/.claude)
+# and write the vault (/vault) without running privileged.
+RUN mkdir -p /home/node/.claude /vault && chown -R node:node /home/node/.claude /vault
+USER node
 WORKDIR /project
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/entrypoint"]
