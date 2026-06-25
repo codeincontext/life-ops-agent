@@ -10,13 +10,18 @@ set -uo pipefail
 
 CONFIG_DIR="$HOME/.claude"
 CREDS="$CONFIG_DIR/.credentials.json"
+LIVE="$HOME/.claude.json"               # where Claude reads/writes it (ephemeral $HOME)
+SAVED="$CONFIG_DIR/claude.json.saved"   # persisted copy, inside the $CONFIG_DIR volume
 
-# $HOME/.claude.json holds onboarding/theme/folder-trust state but lives OUTSIDE
-# the $CONFIG_DIR volume, so a container *recreate* wipes it (and a recreated
-# container gets a fresh machine-id, which also resets onboarding) — throwing a
-# detached Remote Control session back into the onboarding + folder-trust
-# prompts, which block on input and never reach "active". These flags are
-# static, so just (re)assert them on every boot, before Claude starts.
+# .claude.json holds BOTH static state (onboarding/theme/folder-trust) AND
+# dynamic state we cannot regenerate — notably the interactive /mcp connector
+# (Gmail/Calendar) authorisation. It lives OUTSIDE the volume, so a container
+# recreate wipes it: the onboarding/trust prompts return (blocking a detached
+# session) AND the connectors lose auth. Fix: restore it from the volume on
+# boot, re-assert the static flags, then keep saving it back so a later /mcp
+# re-auth survives the next recreate.
+[ -f "$SAVED" ] && cp -f "$SAVED" "$LIVE"
+
 node -e '
   const fs = require("fs"), p = process.env.HOME + "/.claude.json";
   let d = {}; try { d = JSON.parse(fs.readFileSync(p, "utf8")); } catch (e) {}
@@ -30,6 +35,11 @@ node -e '
   );
   fs.writeFileSync(p, JSON.stringify(d, null, 2));
 ' || echo "[entrypoint] warning: could not pre-seed .claude.json flags"
+cp -f "$LIVE" "$SAVED" 2>/dev/null || true
+
+# Continuously persist .claude.json changes (e.g. a later interactive /mcp
+# re-auth) back into the volume so they survive the next recreate.
+( while true; do sleep 10; cp -f "$LIVE" "$SAVED" 2>/dev/null || true; done ) &
 
 if [[ ! -f "$CREDS" ]]; then
   cat <<EOF
