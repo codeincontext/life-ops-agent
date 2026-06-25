@@ -41,6 +41,20 @@ cp -f "$LIVE" "$SAVED" 2>/dev/null || true
 # re-auth) back into the volume so they survive the next recreate.
 ( while true; do sleep 10; cp -f "$LIVE" "$SAVED" 2>/dev/null || true; done ) &
 
+# Keep /vault continuously synced with your Obsidian account in the background
+# (bidirectional: your Mac's edits flow in, the agent's edits flow back out), so
+# an interactive session always sees an up-to-date vault. Runs as this same node
+# user, so no cross-container uid issues. Guarded: skipped with setup hints until
+# the one-time `ob login` + `ob sync-setup`.
+if [[ -f "$HOME/.config/obsidian-headless/auth_token" ]]; then
+  echo "[entrypoint] starting continuous vault sync (ob sync --continuous)"
+  ( while true; do ob sync --path /vault --continuous; echo "[vault-sync] exited (rc=$?); restarting in 10s"; sleep 10; done ) &
+else
+  echo "[entrypoint] vault sync NOT configured yet — run once:"
+  echo "    docker exec -it claude-remote ob login"
+  echo "    docker exec -it claude-remote ob sync-setup --path /vault"
+fi
+
 if [[ ! -f "$CREDS" ]]; then
   cat <<EOF
 ────────────────────────────────────────────────────────────────────

@@ -6,7 +6,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates git tini tzdata curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g @anthropic-ai/claude-code
+# claude-code: the agent. obsidian-headless (`ob`): a CLI Obsidian Sync client
+# used to keep /vault synced with your Obsidian account (no Electron/GUI needed).
+RUN npm install -g @anthropic-ai/claude-code obsidian-headless
 
 ENV TZ=Europe/Paris
 
@@ -17,7 +19,8 @@ RUN chmod +x /usr/local/bin/entrypoint
 # get named volumes mounted onto them and chown to node, so those volumes
 # initialise node-owned — letting the session persist its login (/home/node/.claude)
 # and write the vault (/vault) without running privileged.
-RUN mkdir -p /home/node/.claude /vault && chown -R node:node /home/node/.claude /vault
+RUN mkdir -p /home/node/.claude /vault /home/node/.config/obsidian-headless \
+    && chown -R node:node /home/node/.claude /vault /home/node/.config
 USER node
 WORKDIR /project
 

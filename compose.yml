@@ -21,6 +21,8 @@ services:
       - ${PROJECT_PATH:?set PROJECT_PATH in .env}:/project
       # Vault volume owned by this stack (not shared) — simplest ownership.
       - obsidian-vault:/vault
+      # Obsidian Sync login + sync config for the in-container `ob` sync client.
+      - ob-config:/home/node/.config/obsidian-headless
     # No ports published: Remote Control only needs OUTBOUND https to
     # api.anthropic.com. Nothing inbound to expose — your phone reaches the
     # session via Anthropic, not by connecting to the box.
