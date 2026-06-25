@@ -11,6 +11,14 @@ set -uo pipefail
 CONFIG_DIR="$HOME/.claude"
 CREDS="$CONFIG_DIR/.credentials.json"
 
+# $HOME/.claude.json holds onboarding/theme/folder-trust state but lives OUTSIDE
+# the $CONFIG_DIR volume, so a container *recreate* (image update) wipes it —
+# throwing a detached Remote Control session back into the onboarding + folder-
+# trust prompts, which block on input and never reach "active". Persist it inside
+# the volume via a symlink, recreated on every boot. Writes (incl. the one-time
+# interactive /login) flow through the link into the volume, so they survive.
+ln -sfn "$CONFIG_DIR/claude.json.persisted" "$HOME/.claude.json"
+
 if [[ ! -f "$CREDS" ]]; then
   cat <<EOF
 ────────────────────────────────────────────────────────────────────
